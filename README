@@ -1,5 +1,7 @@
 A toolkit for working with and editing ActionScript bytecode at run-time.
 
 
+Security sandbox violation: ExternalInterface caller swf_editor.swf cannot access public/index.html
+
 If you're trying to compile this and run it from your hard-drive, you'll probably run in to a Security Sandbox violation Error.  You will need to add the public folder to the Global Security Settings (http://www.macromedia.com/support/documentation/en/flashplayer/help/settings_manager04.html) list of trusted files.
 
