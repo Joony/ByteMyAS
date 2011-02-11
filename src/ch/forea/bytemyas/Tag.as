@@ -8,7 +8,7 @@ package ch.forea.bytemyas {
 
   import ch.forea.bytemyas.tags.*;
 
-  public dynamic class Tag extends Proxy{
+  public dynamic class Tag extends DataObject {
 
     private var propertyList:Array = ['name', 'id', 'length'];
 
@@ -196,9 +196,6 @@ package ch.forea.bytemyas {
       return null;
     }
 
-    public function getPropertyType(propertyName:String):String {
-      return describeType(this)..accessor.(@name == propertyName).@type;
-    }
 
 
     public function Tag(id:uint, length:uint, data:ByteArray, propertyOrder:Array = null) {
@@ -206,40 +203,24 @@ package ch.forea.bytemyas {
       _length = length;
       _data = data;
 
-      if(propertyOrder && propertyOrder.length){
-        propertyList = propertyList.concat(propertyOrder);
-      }else{
-        for each(var propertyName:String in describeType(this)..accessor.(@type == 'readonly' || @type == 'readwrite').@name){
+      var propertyList:Array = ['name', 'id', 'length'];
+
+      if(propertyOrder) {
+	propertyList = propertyList.concat(propertyOrder);	
+      } else {
+	for each(var propertyName:String in describeType(this)..accessor.(@type == 'readonly' || @type == 'readwrite').@name){
 	  if(propertyName != 'name' && propertyName != 'id' && propertyName != 'length' && propertyName != 'data'){
 	    propertyList.push(propertyName);
           }
         }
       }
+
       propertyList.push('data');
+
+      super(propertyList);
     }
 
-    flash_proxy override function nextNameIndex(index:int):int{
-      if(propertyList && index < propertyList.length)
-        return index + 1;
-      return 0;
-    }
-
-    flash_proxy override function nextName(index:int):String{
-      return propertyList[index - 1];
-    }
-
-    flash_proxy override function nextValue(index:int):*{
-      return this[propertyList[index - 1]];
-    }
-
-    /*
-    flash_proxy override function callProperty(name:*, ...rest):*{
-      if(name == 'toString')
-        return '[object ' + flash.utils.getQualifiedClassName(this) + ']';
-    }
-    */
-
-    public function toString():String {
+    public override function toString():String {
       var description:String = '[' + name + ':' + id + ']';
       for(var propertyName:String in this) {
         if(propertyName != 'data' && propertyName != 'id' && propertyName != 'name')
