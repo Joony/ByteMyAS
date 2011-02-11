@@ -1,0 +1,8 @@
+# Compiled source #
+###################
+*.swf
+
+# OS generated files #
+######################
+.DS_Store?
+*~

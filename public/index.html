@@ -1,0 +1,38 @@
+<html>
+  <head>
+    <title>SWF Editor</title>
+  </head>
+  <body>
+    <div id="SWFEditor">
+      <p>You need Flash Player 10 or above installed to view this example.</p> 
+    </div> 
+    <p>
+      <script src="js/swfobject.js" type="text/javascript"></script>
+      <script type="text/javascript">
+	var swfContainer;
+	function setHeight(h){
+	  swfContainer.height = h > 4095 ? 4095 : h;
+	  document.body.style.height = h;
+
+	  //parseInt(document.body.style.height)
+	  //document.body.clientHeight
+	  //parseInt(swfContainer.height)
+          //document.body.scrollTop
+	}
+	function outputStatus(e) {
+	  //alert("e.success = " + e.success +"\ne.id = "+ e.id +"\ne.ref = "+ e.ref);
+	  swfContainer = e.ref;
+	  swfContainer.style.position = "absolute";
+	}
+
+	window.onscroll = function() {
+	  offset = Math.max(document.body.scrollTop + document.body.clientHeight - parseInt(swfContainer.height), 0);
+	  swfContainer.style.top = offset;
+	  swfContainer.updatePosition(offset);
+        }
+	swfobject.embedSWF("swf_editor.swf", "SWFEditor", "633", "300", "10", null, null, {bgcolor: '#FFFFFF'}, {id: 'SWFEditor'}, outputStatus);
+      </script>
+    </p>
+  </body>
+</html>
+
