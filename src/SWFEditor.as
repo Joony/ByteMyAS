@@ -31,21 +31,6 @@ package{
 
     private var container:Sprite = new Sprite();
 
-    /*
-    private var fileName:Label;
-    private var versionNumber:Label;
-    private var uncompressedFileSize:Label;
-    private var compressedFileSize:Label;
-    private var xMin:Label;
-    private var xMax:Label;
-    private var yMin:Label;
-    private var yMax:Label;
-    private var frameRate:Label;
-    private var frameCount:Label;
-    private var compressed:RadioButton;
-    private var uncompressed:RadioButton;
-    */
-
     public function SWFEditor(){
       stage.scaleMode = StageScaleMode.NO_SCALE;
       stage.align = StageAlign.TOP_LEFT;
@@ -62,9 +47,6 @@ package{
       loaderInfo.bytes.readBytes(binaryFile, 0, loaderInfo.bytes.length);
 
 
-      // set the filename to be this.loaderInfo.url and regex out the name and extension
-
-
       // create panel and buttons for loading and saving
       var buttonPanel:Panel = new Panel(this, 10, 10);
       buttonPanel.setSize(120, 70);
@@ -76,72 +58,7 @@ package{
       loadButton.width = 100;
 
 
-
-      /*
-
-      // create a panel for the header
-      var swfHeaderPanel:Panel = new Panel(this);
-      addPanel(swfHeaderPanel);
-      swfHeaderPanel.setSize(483, 100);
-
-      new Label(swfHeaderPanel, 10, 10, "File name:");
-      fileName = new Label(swfHeaderPanel, 120, 10, "swf_editor.swf");
-      
-      new Label(swfHeaderPanel, 10, 30, "Version:");
-      versionNumber = new Label(swfHeaderPanel, 120, 30, binaryFile[3]);
-
-      new Label(swfHeaderPanel, 10, 50, "Uncompressed file size:");
-      binaryFile.position = 4;
-      uncompressedFileSize = new Label(swfHeaderPanel, 120, 50, commafy(binaryFile.readUnsignedInt()) + " bytes");
-
-      new Label(swfHeaderPanel, 10, 70, "Compressed file size:");
-      compressedFileSize = new Label(swfHeaderPanel, 120, 70, "");
-
-
-      // create a panel for the compression options
-      var compressionPanel:Panel = new Panel(this);
-      addPanel(compressionPanel);
-      compressionPanel.setSize(483, 85);
-
-      new Label(compressionPanel, 10, 10, "Compression:");
-      compressed = new RadioButton(compressionPanel, 20, 35, "Compressed", true, compress);
-      uncompressed = new RadioButton(compressionPanel, 20, 55, "Uncompressed", false, uncompress);
-
-      if(binaryFile[0] == 0x43){
-        compressed.selected = true;
-	compressedFileSize.text = commafy(binaryFile.length) + " bytes";
-      }else{
-        uncompressed.selected = true;
-	compressedFileSize.text = "Unknown.  Compress the swf to find out.";
-      }
-
-      
-      // create a panel for the extended header
-      var extendedHeaderPanel:Panel = new Panel(this);
-      addPanel(extendedHeaderPanel);
-      extendedHeaderPanel.setSize(483, 160);
-
-      new Label(extendedHeaderPanel, 10, 10, "Dimensions:");
-      new Label(extendedHeaderPanel, 60, 30, "xMin:");
-      xMin = new Label(extendedHeaderPanel, 100, 30);
-      new Label(extendedHeaderPanel, 60, 50, "xMax:");
-      xMax = new Label(extendedHeaderPanel, 100, 50);
-      new Label(extendedHeaderPanel, 60, 70, "yMin:");
-      yMin = new Label(extendedHeaderPanel, 100, 70);
-      new Label(extendedHeaderPanel, 60, 90, "xMax:");
-      yMax = new Label(extendedHeaderPanel, 100, 90);
-
-      new Label(extendedHeaderPanel, 10, 110, "Frame rate:");
-      frameRate = new Label(extendedHeaderPanel, 80, 110);
-
-      new Label(extendedHeaderPanel, 10, 130, "Frame count:");
-      frameCount = new Label(extendedHeaderPanel, 80, 130);
-
-      updateAttributes();
-      listTags();
-
-      */
-
+      // create the header panel
       binaryFile.position = 4;
       headerPanel = new HeaderPanel(this.loaderInfo.url.split('/').pop(), binaryFile[3], String(binaryFile.readUnsignedInt())['commafy']() + " bytes", "Unknown.  Compress the swf to find out.", false);
 
@@ -161,13 +78,6 @@ package{
     }
 
     private function addPanel(panel:Sprite):void{
-      /*
-      var height:uint = 10;
-      for each(var p:Sprite in panels)
-	height += p.height + 10;
-      panel.x = 140;
-      panel.y = height;
-      */
       container.addChild(panel);
       panels.push(panel);
     }
@@ -181,15 +91,6 @@ package{
       }
       ExternalInterface.call("setHeight", height);
     }
-    
-    /*
-    private function commafy(number:uint):String{
-      return String(number).replace(/(^|[^\w.])(\d{4,})/g, function($0:*, $1:*, $2:*):* {
-	    return $1 + $2.replace(/\d(?=(?:\d\d\d)+(?!\d))/g, "$&,");
-	  });
-    }
-    */
-
 
     private function selectFile(e:MouseEvent):void{
       stage.removeEventListener(MouseEvent.MOUSE_DOWN, selectFile);
@@ -215,24 +116,6 @@ package{
 	//throw new Exception("File is not a valid .swf");
       }
 
-
-      /*
-      fileName.text = file.name;
-      versionNumber.text = binaryFile[3];
-      
-      binaryFile.position = 4;
-      uncompressedFileSize.text = commafy(binaryFile.readUnsignedInt()) + " bytes";
-
-
-      if(binaryFile[0] == 0x43){
-	compressed.selected = true;
-	compressedFileSize.text = commafy(binaryFile.length) + " bytes";
-      }else{
-	uncompressed.selected = true;
-	compressedFileSize.text = "Unknown.  Compress the swf to find out.";
-      }
-      */
-
       updateAttributes();
 
       listTags();
@@ -246,26 +129,11 @@ package{
       while(binaryFile.position < binaryFile.length){
 	tag = binaryFile.readTag();
 	
-	/*
-	trace('-----------------------------------------------------------------------');
-	trace(tag);
-        for(var n:String in tag){
-	  //var type:* = describeType(tag)..accessor.(@name == n).@type;
-	  if(n != "data") {
-            trace(n + ' = ' + tag[n] + ' (' + tag.getPropertyType(n) + ')');
-	  } else {
-	    trace('data (' + tag.getPropertyType(n) + ')');
-          }
-        }
-	*/
-
 	var c:Class = TagPanel.getClass(tag.id);
-	if(c) {
+	if(c)
 	  addPanel(new c(tag));
-        } else {
-          // addPanel(new TagPanel(tag.name, tag.id, commafy(tag.length) + " bytes"));
+        else
           addPanel(new TagPanel(tag));
-	}
       }
 
       
@@ -297,24 +165,18 @@ package{
 	compress();
     }
 
-
     private function compress(e:MouseEvent = null):void{
       if(binaryFile[0] == 0x43)
 	return;
       binaryFile.compress();
-      //compressedFileSize.text = commafy(binaryFile.length) + " bytes";
     }
 
     private function uncompress(e:MouseEvent = null):void{
       if(binaryFile[0] == 0x46)
 	return;
       binaryFile.uncompress();
-      //compressedFileSize.text = "Unknown.  Compress the swf to find out.";
     }
 
-    
-
-    
     private function save(e:MouseEvent):void{
       var fileName:String = 'swf_editor.swf';
       try{
