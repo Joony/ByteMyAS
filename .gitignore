@@ -5,4 +5,7 @@
 # OS generated files #
 ######################
 .DS_Store?
+
+# I use emacs #
+###############
 *~
