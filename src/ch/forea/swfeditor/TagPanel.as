@@ -35,32 +35,23 @@ package ch.forea.swfeditor {
 
       trace('-----------------------------------------------------------------------');
       trace(tag);
-      for(var propertyName:String in tag){
+      for(var propertyName:String in tag) {
 	switch(propertyName) {
-	  case "name":
-	  case "id":
+	  case 'name':
+	  case 'id':
 	    addField(new LabelField(propertyName, tag[propertyName]));
 	    break;
-	  case "length":
+	  case 'length':
 	    addField(new LabelField(propertyName, String(tag[propertyName])['commafy']() + " bytes"));
 	    break;
-	  case "data":
+	  case 'data':
 	    //addField(new BinaryField(propertyName, tag[propertyName]));
 	    break;
 	  default:
 	    processProperty(propertyName, tag[propertyName], tag.getPropertyType(propertyName));
-	    /*
-	    switch(tag.getPropertyType(propertyName)) {
-	      case "Boolean":
-	        addField(new BooleanField(propertyName, tag[propertyName]));
-		break;
-	      default:
-	        addField(new LabelField(propertyName, tag[propertyName]));
-	    }
-            */
 	}
 
-	if(propertyName != "data") {
+	if(propertyName != 'data') {
           trace(propertyName + ' = ' + tag[propertyName] + ' (' + tag.getPropertyType(propertyName) + ')');
 	} else {
 	  trace('data (' + tag.getPropertyType(propertyName) + ')');
@@ -78,8 +69,14 @@ package ch.forea.swfeditor {
     private function processProperty(name:String, value:*, type:String):void {
       trace('Process propety: name = ' + name + ', value = ' + value + ', type = ' + type);
       switch(type) {
-	case "Boolean":
+	case 'Boolean':
 	  addField(new BooleanField(name, value));
+	  break;
+	case 'Array':
+	  addFiled(new LabelField(name, '');
+	  for(var propertyName:String in value) {
+	    processProperty(propertyName, value[propertyName], value.getPropertyType(propertyname));
+	  }
 	  break;
 	default:
 	  addField(new LabelField(name, value));

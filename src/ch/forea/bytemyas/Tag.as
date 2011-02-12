@@ -10,8 +10,6 @@ package ch.forea.bytemyas {
 
   public dynamic class Tag extends DataObject {
 
-    private var propertyList:Array = ['name', 'id', 'length'];
-
     private var _id:uint;
     public function get id():uint {
       return _id;
