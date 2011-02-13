@@ -73,10 +73,12 @@ package ch.forea.swfeditor {
 	  addField(new BooleanField(name, value));
 	  break;
 	case 'Array':
-	  addFiled(new LabelField(name, '');
-	  for(var propertyName:String in value) {
-	    processProperty(propertyName, value[propertyName], value.getPropertyType(propertyname));
-	  }
+	  addField(new LabelField(name, ''));
+	  for(var i:uint = 0; i < value.length; i++) {
+	    for(var propertyName:String in value[i]) {
+	      processProperty(propertyName, value[i][propertyName], value[i].getPropertyType(propertyName));
+	    }
+          }
 	  break;
 	default:
 	  addField(new LabelField(name, value));

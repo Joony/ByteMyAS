@@ -18,15 +18,15 @@ package ch.forea.bytemyas {
     public function get length():uint {
       return _length;
     }
-    private var _data:ByteArray;
-    public function get data():ByteArray {
-      var temp:ByteArray = new ByteArray();
+    private var _data:ComplexByteArray;
+    public function get data():ComplexByteArray {
+      var temp:ComplexByteArray = new ComplexByteArray();
       temp.endian = Endian.LITTLE_ENDIAN;
       _data.position = 0;
       _data.readBytes(temp, 0, _length + (_length < 63 ? 2 : 6));
       return temp;
     }
-    public function set data(newData:ByteArray):void{
+    public function set data(newData:ComplexByteArray):void{
       _data = newData;
     }
 
@@ -176,6 +176,8 @@ package ch.forea.bytemyas {
 	  return ProductInfo;
 	case 43:
 	  return FrameLabel;
+	case 56:
+	  return ExportAssets;
 	case 64:
 	  return EnableDebugger2;
 	case 65:
@@ -196,7 +198,7 @@ package ch.forea.bytemyas {
 
 
 
-    public function Tag(id:uint, length:uint, data:ByteArray, propertyOrder:Array = null) {
+    public function Tag(id:uint, length:uint, data:ComplexByteArray, propertyOrder:Array = null) {
       _id = id;
       _length = length;
       _data = data;

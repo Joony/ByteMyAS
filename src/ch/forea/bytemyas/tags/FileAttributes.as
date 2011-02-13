@@ -1,10 +1,8 @@
 package ch.forea.bytemyas.tags {
 
-  import flash.utils.ByteArray;
-
-  import ch.forea.bytemyas.SWFArray;
+  import ch.forea.bytemyas.ComplexByteArray;
   import ch.forea.bytemyas.Tag;
-    
+  
   public class FileAttributes extends Tag{
 
     private static const USE_DIRECT_BLIT:uint = 0x40; // 64
@@ -13,7 +11,7 @@ package ch.forea.bytemyas.tags {
     private static const ACTIONSCRIPT3:uint = 0x8; // 8
     private static const USE_NETWORK:uint = 0x1; // 1
 
-    public function FileAttributes(id:uint, length:uint, data:ByteArray){
+    public function FileAttributes(id:uint, length:uint, data:ComplexByteArray){
       super(id, length, data, ['useDirectBlit', 'useGPU', 'hasMetadata', 'actionScript3', 'useNetwork']);
     }
 
@@ -53,7 +51,7 @@ package ch.forea.bytemyas.tags {
     }
 
     private function updateBitFlag(flag:uint, value:Boolean):void {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 2;
       var flags:uint = tempData.readUnsignedByte();
       if((value && flags & flag) || (!value && !(flags & flag)))
@@ -64,7 +62,7 @@ package ch.forea.bytemyas.tags {
     }
 
     public override function toString():String{
-      return '[object FileAttributes] ' + SWFArray.formatBinaryByte(data[2]) + ', ' + SWFArray.formatBinaryByte(data[3]) + ', ' + SWFArray.formatBinaryByte(data[4]) + ', ' + SWFArray.formatBinaryByte(data[5]);
+      return '[object FileAttributes] ' + ComplexByteArray.formatBinaryByte(data[2]) + ', ' + ComplexByteArray.formatBinaryByte(data[3]) + ', ' + ComplexByteArray.formatBinaryByte(data[4]) + ', ' + ComplexByteArray.formatBinaryByte(data[5]);
     }
 
     

@@ -6,6 +6,7 @@ package ch.forea.bytemyas {
 
   public dynamic class DataObject extends Proxy{
 
+    // TODO: Add _data
     private var propertyList:Array = [];
 
     public function getPropertyType(propertyName:String):String {
@@ -20,7 +21,7 @@ package ch.forea.bytemyas {
 	  propertyList.push(propertyName);
         }
       }
-      propertyList.push('data');
+      //propertyList.push('data');
     }
 
     // we shouldn't need these, as you should implement your own getters/setters for your properties in a subclass of Tag

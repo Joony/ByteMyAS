@@ -1,17 +1,16 @@
 package ch.forea.bytemyas.tags {
 
-  import flash.utils.ByteArray;
-
+  import ch.forea.bytemyas.ComplexByteArray;
   import ch.forea.bytemyas.Tag;
     
   public class FrameLabel extends Tag{
 
-    public function FrameLabel(id:uint, length:uint, data:ByteArray){
+    public function FrameLabel(id:uint, length:uint, data:ComplexByteArray){
       super(id, length, data, ['frameName', 'namedAnchor']);
     }
 
     public function get frameName():String {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 2;
       var stringLength:uint;
       while(tempData.position < 2 + length) {
@@ -24,7 +23,7 @@ package ch.forea.bytemyas.tags {
     }
 
     public function get namedAnchor():Boolean {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       return tempData[2 + length - 1] != 0;
     }
     // TODO: setter for namedAnchor is going to mess with the length of the data

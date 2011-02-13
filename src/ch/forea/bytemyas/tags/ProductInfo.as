@@ -1,18 +1,17 @@
 package ch.forea.bytemyas.tags {
 
-  import flash.utils.ByteArray;
-
+  import ch.forea.bytemyas.ComplexByteArray;
   import ch.forea.bytemyas.Tag;
     
   public class ProductInfo extends Tag{
 
-    public function ProductInfo(id:uint, length:uint, data:ByteArray){
+    public function ProductInfo(id:uint, length:uint, data:ComplexByteArray){
       super(id, length, data, ['productID', 'edition', 'version', 'compilationDate']);
     }
 
     // XXX: Maybe this should just return the int
     public function get productID():String {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 2;
       switch(tempData.readUnsignedInt()) {
         case 0:
@@ -27,7 +26,7 @@ package ch.forea.bytemyas.tags {
       return null;
     }
     public function set productID(id:String):void {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 2;
       tempData.writeInt(parseInt(id));
       data = tempData;
@@ -35,7 +34,7 @@ package ch.forea.bytemyas.tags {
 
     // XXX: Maybe this should just return the int
     public function get edition():String {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 6;
       switch(tempData.readUnsignedInt()) {
         case 0:
@@ -56,7 +55,7 @@ package ch.forea.bytemyas.tags {
       return null;
     }
     public function set edition(id:String):void {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 6;
       tempData.writeInt(parseInt(id));
       data = tempData;
@@ -64,7 +63,7 @@ package ch.forea.bytemyas.tags {
     
     // XXX: Maybe this should be split up
     public function get version():String {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 10;
       var majorVersion:uint = tempData.readUnsignedByte();
       var minorVersion:uint = tempData.readUnsignedByte();
@@ -74,7 +73,7 @@ package ch.forea.bytemyas.tags {
     }
 
     public function get compilationDate():Date {
-      var tempData:ByteArray = data;
+      var tempData:ComplexByteArray = data;
       tempData.position = 20;
       var milli:Number = tempData.readUnsignedInt();
       var date:Date = new Date();

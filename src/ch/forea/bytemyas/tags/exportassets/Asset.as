@@ -1,15 +1,15 @@
-package ch.forea.bytemyas.tags.symbolclass {
+package ch.forea.bytemyas.tags.exportassets {
 
   import flash.utils.ByteArray;
   import flash.utils.Endian;
 
   import ch.forea.bytemyas.DataObject;
 
-  public class Symbol extends DataObject {
+  public class Asset extends DataObject {
 
     private var _data:ByteArray;
 
-    public function Symbol(data:ByteArray) {
+    public function Asset(data:ByteArray) {
       _data = data;
       super(['tag', 'name']);
     }
