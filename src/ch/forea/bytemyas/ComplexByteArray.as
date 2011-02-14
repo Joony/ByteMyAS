@@ -39,19 +39,19 @@ package ch.forea.bytemyas {
       var result:int = readUnsignedByte();
       if (!(result & 0x00000080))
 	return result;
-      result = result & 0x0000007f | readUnsignedByte()<<7;
+      result = result & 0x0000007f | (readUnsignedByte() << 7);
       if (!(result & 0x00004000))
 	return result;
-      result = result & 0x00003fff | readUnsignedByte()<<14;
+      result = result & 0x00003fff | (readUnsignedByte() << 14);
       if (!(result & 0x00200000))
 	return result;
-      result = result & 0x001fffff | readUnsignedByte()<<21;
+      result = result & 0x001fffff | (readUnsignedByte() << 21);
       if (!(result & 0x10000000))
 	return result;
-      return result & 0x0fffffff | readUnsignedByte()<<28;
+      return result & 0x0fffffff | (readUnsignedByte() << 28);
     }
 
-    
+    /*
     public function readStringInfo(size:uint):String{
       //var size:uint = readU30(ba);
       var s:String = "";
@@ -61,7 +61,9 @@ package ch.forea.bytemyas {
       }
       return s;
     }
-    
+    */
+
+    /*
     public function readString():String{
       var charCode:uint = readUnsignedByte();
       var s:String = "";
@@ -70,6 +72,24 @@ package ch.forea.bytemyas {
         charCode = readUnsignedByte();
       }
       return s;
+    }
+    */
+
+    public function readStringInfo(size:uint):String {
+      return readUTFBytes(size);
+    }
+
+    public function readString():String{
+      var startPosition:uint = position;
+      var stringLength:uint;
+      // XXX Will this run over???
+      while(position < length) {
+	stringLength++;
+	if(readByte() == 0)
+	  break;
+      }
+      position = startPosition;
+      return readUTFBytes(stringLength);
     }
     
 
