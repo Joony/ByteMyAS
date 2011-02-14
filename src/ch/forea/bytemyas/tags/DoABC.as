@@ -9,11 +9,6 @@ package ch.forea.bytemyas.tags {
 
     public function DoABC(id:uint, length:uint, data:ComplexByteArray){
       super(id, length, data, ['kDoAbcLazyInitialize', 'doAbcName']);
-      try {
-	trace(createIndex());
-      } catch(e:Error) {
-	trace(e.message);
-      }
     }
 
     public function get kDoAbcLazyInitialize():Boolean {
@@ -51,6 +46,7 @@ package ch.forea.bytemyas.tags {
 
 
     public function createIndex():ABCIndex{
+
       var tempData:ComplexByteArray = data;
       var index:ABCIndex = new ABCIndex();
       var currentPosition:uint;
@@ -60,16 +56,17 @@ package ch.forea.bytemyas.tags {
       var count:uint;
       var inner_count:uint;
       
-      tempData.position = 0;
-      
       var tagHeader:uint = tempData.readUnsignedShort();
       var tagID:uint = tagHeader >> 6;
       var tagLength:uint = tagHeader & 63;
-      if(tagLength == 63) tagLength = tempData.readUnsignedInt();
+      if(tagLength == 63)
+        tagLength = tempData.readUnsignedInt();
       
       tempData.readUnsignedInt(); // flags
       tempData.readString(); // name
       
+      // abcFile starts here
+
       index.minor_version = tempData.position;
       tempData.readUnsignedShort();
       
@@ -78,6 +75,7 @@ package ch.forea.bytemyas.tags {
       
       
       // 4.3 Constant Pool
+      // int
       index.constant_pool.int_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -85,6 +83,7 @@ package ch.forea.bytemyas.tags {
 	tempData.readU32();
       }
       
+      // uint
       index.constant_pool.uint_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -92,6 +91,7 @@ package ch.forea.bytemyas.tags {
 	tempData.readU32();
       }
       
+      // double
       index.constant_pool.double_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -99,14 +99,15 @@ package ch.forea.bytemyas.tags {
 	tempData.readDouble();
       }
       
+      // string
       index.constant_pool.string_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
 	index.constant_pool.string[i - 1] = tempData.position;
 	tempData.readStringInfo(tempData.readU32());
       }
-      
 
+      // namespace
       index.constant_pool.namespace_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -117,6 +118,7 @@ package ch.forea.bytemyas.tags {
 	tempData.readU32();
       }
       
+      // namespace set
       index.constant_pool.ns_set_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -129,6 +131,7 @@ package ch.forea.bytemyas.tags {
 	}
       }
       
+      // multiname
       index.constant_pool.multiname_count = tempData.position;
       count = tempData.readU32();
       for(i = 1; i < count; i++){
@@ -429,9 +432,12 @@ internal class ABCIndex{
   public function addMethodBody():void{
     method_body.push(new MethodBodyInfo());
   }
+
+  /*
   public function invalidate(index:uint, difference:int):void{
     if(minor_version > index) minor_version += difference;
   }
+  */
 
   public function toString():String{
     var val:String = 'minor_version = ' + minor_version + "\n";
@@ -450,6 +456,7 @@ internal class ABCIndex{
     return val;
   }
 }
+
 
 internal class CPoolInfo{
 
