@@ -50,8 +50,6 @@ package ch.forea.bytemyas.tags {
     }
 
 
-    private var stringConstantArray:Array = [];
-    private var multinameArray:Array = [];
     public function createIndex():ABCIndex{
       var tempData:ComplexByteArray = data;
       var index:ABCIndex = new ABCIndex();
@@ -70,185 +68,101 @@ package ch.forea.bytemyas.tags {
       if(tagLength == 63) tagLength = tempData.readUnsignedInt();
       
       tempData.readUnsignedInt(); // flags
-
-      trace('DoABC');
-
-      trace('name = ' + tempData.readString()); // name
+      tempData.readString(); // name
       
       index.minor_version = tempData.position;
-      trace('minor_version = ' + tempData.readUnsignedShort());
+      tempData.readUnsignedShort();
       
       index.major_version = tempData.position;
-      trace('major_version = ' + tempData.readUnsignedShort());
+      tempData.readUnsignedShort();
       
-      trace('constant_pool');
+      
       // 4.3 Constant Pool
       index.constant_pool.int_count = tempData.position;
       count = tempData.readU32();
-      trace('int_count = ' + count);
       for(i = 1; i < count; i++){
 	index.constant_pool.integer[i - 1] = tempData.position;
-	trace(tempData.readU32());
+	tempData.readU32();
       }
       
       index.constant_pool.uint_count = tempData.position;
       count = tempData.readU32();
-      trace('uint_count = ' + count);
       for(i = 1; i < count; i++){
 	index.constant_pool.uinteger[i - 1] = tempData.position;
-	trace(tempData.readU32());
+	tempData.readU32();
       }
       
       index.constant_pool.double_count = tempData.position;
       count = tempData.readU32();
-      trace('double_count = ' + count);
       for(i = 1; i < count; i++){
 	index.constant_pool.double[i - 1] = tempData.position;
-	trace(tempData.readDouble());
+	tempData.readDouble();
       }
       
       index.constant_pool.string_count = tempData.position;
       count = tempData.readU32();
-      trace('string_count = ' + count);
-
-      stringConstantArray = [];
-
       for(i = 1; i < count; i++){
 	index.constant_pool.string[i - 1] = tempData.position;
-	var string_size:uint = tempData.readU32();
-	stringConstantArray.push(tempData.readStringInfo(string_size));
+	tempData.readStringInfo(tempData.readU32());
       }
-      trace(stringConstantArray);
+      
 
       index.constant_pool.namespace_count = tempData.position;
       count = tempData.readU32();
-      trace('namespace_count = ' + count);
-      var tempNamespaceArray:Array = [];
       for(i = 1; i < count; i++){
 	index.constant_pool.addNamespace();
 	index.constant_pool.ns[i - 1].kind = tempData.position;
 	tempData.position++;
 	index.constant_pool.ns[i - 1].name = tempData.position;
-
-	var tempNameIndex:uint = tempData.readU32();
-
-	tempNamespaceArray.push(stringConstantArray[tempNameIndex - 1]);
+	tempData.readU32();
       }
-      trace(tempNamespaceArray);
       
-
       index.constant_pool.ns_set_count = tempData.position;
       count = tempData.readU32();
-      trace('ns_set_count = ' + count);
       for(i = 1; i < count; i++){
 	index.constant_pool.addNsSet();
 	index.constant_pool.ns_set[i - 1].count = tempData.position;
 	inner_count = tempData.readU32();
-	trace('inner_count = ' + inner_count);
 	for(j = 0; j < inner_count; j++){
 	  index.constant_pool.ns_set[i - 1].ns[j] = tempData.position;
-	  trace('ns_set[' + (i - 1) + '].ns[' + j + '] = ' + tempNamespaceArray[tempData.readU32() - 1]);
+	  tempData.readU32();
 	}
       }
       
       index.constant_pool.multiname_count = tempData.position;
       count = tempData.readU32();
-      trace('multiname_count = ' + count);
-      
-      multinameArray = [];
-      
       for(i = 1; i < count; i++){
 	index.constant_pool.addMultiname();
 	index.constant_pool.multiname[i - 1].kind = tempData.position;
-	
-	switch(tempData[tempData.position]){
-	  case 0x07:
-	    trace('QName');
-	    break;
-	  case 0x0D:
-	    trace('QNameA');
-	    break;
-	  case 0x0F:
-	    trace('RTQName');
-	    break;
-	  case 0x10:
-	    trace('RTQNameA');
-	    break;
-	  case 0x11:
-	    trace('RTQNameL');
-	    break;
-	  case 0x12:
-	    trace('RTQNameLA');
-	    break;
-	  case 0x09:
-	    trace('Multiname');
-	    break;
-	  case 0x0E:
-	    trace('MultinameA');
-	    break;
-	  case 0x1B:
-	    trace('MultinameL');
-	    break;
-	  case 0x1C:
-	    trace('MultinameLA');
-	    break;
-	  case 0x13:
-	  case 0x14:
-	    trace('UNKNOWN (NameL?)');
-	    break;
-	  case 0x1D:
-	    trace('???');
-	    break;
-	  default:
-	    trace('ERROR, unknown code: 0x' + tempData[tempData.position].toString(16));
-        }
 	if(tempData[tempData.position] == 0x07 || tempData[tempData.position] == 0x0D){
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.ns = tempData.position;
-
-	  var tempNS:uint = tempData.readU32();
-	  trace('ns = ' + tempNamespaceArray[tempNS - 1]);
-
+	  tempData.readU32();
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
-
-	  var tempName:uint = tempData.readU32();
-	  trace('name = ' + stringConstantArray[tempName - 1]);
-
-	  multinameArray.push(stringConstantArray[tempName - 1]);
-
+	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x0F || tempData[tempData.position] == 0x10){
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
-
-	  multinameArray.push(stringConstantArray[tempData.readU32() - 1]);
-
+	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x11 || tempData[tempData.position] == 0x12){
 	  tempData.position++;
 	}else if(tempData[tempData.position] == 0x09 || tempData[tempData.position] == 0x0E){
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
-
-	  multinameArray.push(stringConstantArray[tempData.readU32() - 1]);
-
+	  tempData.readU32();
 	  index.constant_pool.multiname[i - 1].data.ns_set = tempData.position;
 	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x1B || tempData[tempData.position] == 0x1C){
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.ns_set = tempData.position;
 	  tempData.readU32();
-
-	  multinameArray.push('');
-
 	}else if(tempData[tempData.position] == 0x1D){
 	  // WARNING: undocumented
 	  tempData.position++;
-	  var nameIndex:uint = tempData.readU32();
-
-	  multinameArray.push(stringConstantArray[nameIndex - 1]);
-
+	  tempData.readU32();
 	  inner_count = tempData.readU32();
 	  for(j = 0; j < inner_count; j++) {
-	    var typeIndex:uint = tempData.readU32();
+	    tempData.readU32();
 	  }
 	  
 // here is the implementation of 0x1D from AbcPrinter.java
@@ -269,25 +183,24 @@ multiNameConstants[i].types = types;
 
       }
       
-      trace('method signature');
+      
 
       // 4.5 Method Signature
       index.method_count = tempData.position;
       count = tempData.readU32();
-      trace('method_count = ' + count); 
+      
       for(i = 0; i < count; i++){
 	index.addMethod();
 	index.method[i].param_count = tempData.position;
 	var param_count:uint = tempData.readU32();
-	trace('param_count = ' + param_count);
 	index.method[i].return_type = tempData.position;
-	trace('return type = ' + multinameArray[tempData.readU32() - 1]);
+	tempData.readU32();
 	for(j = 0; j < param_count; j++){
 	  index.method[i].param_type[j] = tempData.position;
-	  trace('param type = ' + multinameArray[tempData.readU32() - 1]);
+	  tempData.readU32();
 	}
 	index.method[i].name = tempData.position;
-	trace('method name = ' + stringConstantArray[tempData.readU32() - 1]);
+	tempData.readU32();
 	index.method[i].flags = tempData.position;
 	var method_flags:uint = tempData.readUnsignedByte();
 	if(method_flags >> 3 & 1){
@@ -310,17 +223,13 @@ multiNameConstants[i].types = types;
 	}
       }
       
-      trace('metadata_info');
-
       // 4.6 metadata_info
       index.metadata_count = tempData.position;
       count = tempData.readU32();
       for(i = 0; i < count; i++){
 	index.addMetadata();
 	index.metadata[i].name = tempData.position;
-
-	trace('name = ' + stringConstantArray[tempData.readU32() - 1]);
-
+	tempData.readU32();
 	index.metadata[i].item_count = tempData.position;
 	inner_count = tempData.readU32();
 	for(j = 0; j < inner_count; j++){
@@ -332,24 +241,16 @@ multiNameConstants[i].types = types;
 	}
       }
       
-
-      trace('instance');
-
       index.class_count = tempData.position;
       var class_count:uint = tempData.readU32();
-      trace('instance_count = ' + count);
+
       // 4.7 Instance
       for(i = 0; i < class_count; i++){
 	index.addInstance();
 	index.instance[i].name = tempData.position;
-
-	trace('name = ' + multinameArray[tempData.readU32() - 1]);
-
+	tempData.readU32();
 	index.instance[i].super_name = tempData.position;
-
-	trace('super_name = ' + multinameArray[tempData.readU32() - 1]);
-
-
+	tempData.readU32();
 	index.instance[i].flags = tempData.position;
 	var instance_flags:uint = tempData.readUnsignedByte();
 	if(instance_flags >> 3 & 1){
@@ -358,29 +259,24 @@ multiNameConstants[i].types = types;
 	}
 	index.instance[i].intrf_count = tempData.position;
 	inner_count = tempData.readU32();
-	trace('intrf__count = ' + inner_count);
+	
 	for(j = 0; j < inner_count; j++){
 	  index.instance[i].intrf[j] = tempData.position;
 	  tempData.readU32();
 	}
 	index.instance[i].iinit = tempData.position;
-	trace('iinit = ' + tempData.readU32());
+	tempData.readU32();
 	indexTraits(tempData, index.instance[i]);
       }
       
-
-      trace('class');
-
       // 4.9 Class
       for(i = 0; i < class_count; i++){
 	index.addClass();
 	index.clss[i].cinit = tempData.position;
-	trace('cinit = ' + tempData.readU32());
+	tempData.readU32();
 	indexTraits(tempData, index.clss[i]);
       }
       
-      trace('script');
-
       // 4.10 Script
       index.script_count = tempData.position;
       count = tempData.readU32();
@@ -391,8 +287,6 @@ multiNameConstants[i].types = types;
 	indexTraits(tempData, index.script[i]);
       }
       
-      trace('method body');
-
       // 4.11 Method body
       index.method_body_count = tempData.position;
       count = tempData.readU32();
@@ -438,59 +332,26 @@ multiNameConstants[i].types = types;
       var i:uint;
       var count:uint;
 
-      trace('trait');
       objectWithTraits.trait_count = tempData.position;
       count = tempData.readU32();
-      trace('trait_count = ' + count);
+      
       for(i = 0; i < count; i++) {
 	objectWithTraits.addTrait();
 	objectWithTraits.trait[i].name = tempData.position;
-
-	trace('name = ' + multinameArray[tempData.readU32() - 1]);
-
+	tempData.readU32();
 	objectWithTraits.trait[i].kind = tempData.position;
 	var trait_kind:uint = tempData.readUnsignedByte();
 
-	switch(trait_kind & 15){
-	  case 0:
-	    trace('kind = slot');
-	    break;
-          case 1:
-	    trace('kind = method');
-	    break;
-          case 2:
-	    trace('kind = getter');
-	    break;
-          case 3:
-	    trace('kind = setter');
-	    break;
-          case 4:
-	    trace('kind = class');
-	    break;
-          case 5:
-	    trace('kind = function');
-	    break;
-          case 6:
-	    trace('kind = const');
-	    break;
-	  default:
-	    trace('ERROR, unknown type: ' + (trait_kind & 15));
-	}
-
-	
 	if((trait_kind & 15) == 0 || (trait_kind & 15) == 6) {
 	  // 4.8.2 Slot and const traits
 	  objectWithTraits.trait[i].data.slot_id = tempData.position;
 	  tempData.readU32();
 	  objectWithTraits.trait[i].data.type_name = tempData.position;
-	  
-	  trace('type_name = ' + multinameArray[tempData.readU32() - 1]);
+	  tempData.readU32();
 
 	  objectWithTraits.trait[i].data.vindex = tempData.position;
-	  
 	  var vindex:int = tempData.readU32();
-	  trace('vindex = ' + vindex);
-
+	  
 	  if(vindex != 0) {
 	    objectWithTraits.trait[i].data.vkind = tempData.position;
 	    tempData.position++;
@@ -517,18 +378,7 @@ multiNameConstants[i].types = types;
 
 	// XXX: NO METADATA!!!!!!
 
-	trace('metadata? ' + (trait_kind >> 4));
-	switch(trait_kind >> 4){
-	  case 0x1:
-	    trace('trait attribute = final');
-	    break;
-	  case 0x2:
-	    trace('trait attribute = override');
-	    break;
-	  case 0x4:
-	    trace('trait attribute = metadata');
-	    break;
-	}
+	
 	if(trait_kind >> 4){
 	  var inner_count:uint = tempData.readU32();
 	  for(var j:uint = 0; j < inner_count; j++){
@@ -588,6 +438,15 @@ internal class ABCIndex{
     val += 'major_version = ' + major_version + "\n";
     val += 'constant_pool = ' + constant_pool + "\n";
     val += 'method_count = ' + method_count + "\n";
+    val += 'method = ' + method + "\n";
+    val += 'metadata_count = ' + metadata_count + "\n";
+    val += 'class_count = ' + class_count + "\n";
+    val += 'instance = ' + instance + "\n";
+    val += 'clss = ' + clss + "\n";
+    val += 'script_count = ' + script_count + "\n";
+    val += 'script = ' + script + "\n";
+    val += 'method_body_count = ' + method_body_count + "\n";
+    val += 'method_body = ' + method_body + "\n";
     return val;
   }
 }
