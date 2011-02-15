@@ -45,10 +45,10 @@ package ch.forea.bytemyas.tags {
     }
 
 
-    public function createIndex():ABCIndex{
+    public function createIndex():DoABCIndex{
 
       var tempData:ComplexByteArray = data;
-      var index:ABCIndex = new ABCIndex();
+      var index:DoABCIndex = new DoABCIndex();
       var currentPosition:uint;
       var newPosition:uint;
       var i:uint;
@@ -138,24 +138,29 @@ package ch.forea.bytemyas.tags {
 	index.constant_pool.addMultiname();
 	index.constant_pool.multiname[i - 1].kind = tempData.position;
 	if(tempData[tempData.position] == 0x07 || tempData[tempData.position] == 0x0D){
+	  // QName or QNameA
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.ns = tempData.position;
 	  tempData.readU32();
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
 	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x0F || tempData[tempData.position] == 0x10){
+	  // RTQName or RTQNameA
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
 	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x11 || tempData[tempData.position] == 0x12){
+	  // RTQNameL or RTQNameLA
 	  tempData.position++;
 	}else if(tempData[tempData.position] == 0x09 || tempData[tempData.position] == 0x0E){
+	  // Multiname or MultinameA
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
 	  tempData.readU32();
 	  index.constant_pool.multiname[i - 1].data.ns_set = tempData.position;
 	  tempData.readU32();
 	}else if(tempData[tempData.position] == 0x1B || tempData[tempData.position] == 0x1C){
+	  // MultinameL or MultinameLA
 	  tempData.position++;
 	  index.constant_pool.multiname[i - 1].data.ns_set = tempData.position;
 	  tempData.readU32();
@@ -399,7 +404,7 @@ multiNameConstants[i].types = types;
 }
 
 
-internal class ABCIndex{
+internal class DoABCIndex{
   public var minor_version:uint;
   public var major_version:uint;
   public var constant_pool:CPoolInfo = new CPoolInfo();

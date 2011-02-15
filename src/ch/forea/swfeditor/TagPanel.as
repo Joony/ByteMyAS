@@ -5,6 +5,8 @@ package ch.forea.swfeditor {
 
   import com.bit101.components.*;
 
+  import ch.forea.swfeditor.panels.*;
+
   public class TagPanel extends Sprite {
 
     private var panel:Panel;
@@ -59,7 +61,6 @@ package ch.forea.swfeditor {
       }
 
       updateContainerHeight();
-      panel.setSize(483, _height);
 
       this.addEventListener(EditorEvent.FIELD_UPDATE, updateField);
 
@@ -92,12 +93,12 @@ package ch.forea.swfeditor {
       trace("tag = " + tag);
     }
 
-    private function addField(field:Sprite):void{
+    protected function addField(field:Sprite):void{
       panel.addChild(field);
       fields.push(field);
     }
 
-    private function updateContainerHeight():void{
+    protected function updateContainerHeight():void{
       var height:uint = 10;
       for each(var field:Sprite in fields) {
 	field.x = 10;
@@ -106,6 +107,7 @@ package ch.forea.swfeditor {
       }
       height += 10;
       _height = height;
+      panel.setSize(483, _height);
     }
 
     public override function get height():Number {
@@ -113,14 +115,12 @@ package ch.forea.swfeditor {
     }
 
     public static function getClass(id:uint):Class{
-      /*
+      
       switch(id){
-	case 69:
-	  return FileAttributes;
-	case 77:
-	  return Metadata;
+	case 82:
+	  return DoABCPanel;
       }
-      */
+      
       return null;
     }
 
