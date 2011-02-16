@@ -110,7 +110,7 @@ package ch.forea.swfeditor.panels {
 	instance.superClass = instanceMultiname.name;
 	// XXX: probably have to take in to account the kind of namespace (should be package namespace)
 	if(instanceMultiname.ns && instanceMultiname.ns != instance.ns && instanceMultiname.ns.name != '')
-	  instance.imports.push(instanceMultiname.ns.name + '.' + instanceMultiname.name);
+	  instance.addImport(instanceMultiname.ns.name + '.' + instanceMultiname.name);
 	// flags - Dynamic, Final, Interface
 	var flags:uint = data[index.instance[i].flags];
 	instance.isSealed = (flags & 0x01) == 0x01;
@@ -138,9 +138,11 @@ package ch.forea.swfeditor.panels {
 	      var slot:Slot = new Slot();
 	      data.position = index.instance[i].trait[j].name;
 	      slot.name = multinames[data.readU32()];
-	      // slot types may have to be imported
+	      // TODO: slot types may have to be imported
 	      data.position = index.instance[i].trait[j].data.type_name;
 	      slot.type = multinames[data.readU32()];
+	      if(slot.type.ns && slot.type.ns.name != '' && (slot.type.ns.kind & 0x05) != 0x05)
+	        instance.addImport(slot.type.ns.name + '.' + slot.type.name);
 
 	      data.position = index.instance[i].trait[j].data.vindex;
 	      var vindex:uint = data.readU32();
@@ -263,6 +265,13 @@ internal class MethodSignature {
 
 internal class Instance {
   public var imports:Vector.<String> = new Vector.<String>();
+  public function addImport(importStatement:String):void {
+    for(var i:uint = 0; i < imports.length; i++) {
+      if(imports[i] == importStatement)
+        return;
+    }
+    imports.push(importStatement);
+  }
   public var ns:NS;
   public var superClass:String;
   public var name:String;
