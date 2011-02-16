@@ -138,8 +138,45 @@ package ch.forea.swfeditor.panels {
 	      var slot:Slot = new Slot();
 	      data.position = index.instance[i].trait[j].name;
 	      slot.name = multinames[data.readU32()];
+	      // slot types may have to be imported
 	      data.position = index.instance[i].trait[j].data.type_name;
 	      slot.type = multinames[data.readU32()];
+
+	      data.position = index.instance[i].trait[j].data.vindex;
+	      var vindex:uint = data.readU32();
+	      if(vindex) {
+		data.position = index.instance[i].trait[j].data.vkind;
+	        switch(data.readU32()) {
+		  case 0x03: // integer
+		    // TODO: cache integer constants
+		    slot.value = 'unknown - integer';
+		    break;
+		  case 0x04: // unsigned integer
+		    // TODO: cache unsigned integer constants
+		    slot.value = 'unknown - unsigned int';
+		    break;
+		  case 0x06: // double
+		    // TODO: cache double constants
+		    slot.value = 'unknown - double';
+		    break;
+		  case 0x01: // string
+		    slot.value = '"' + stringConstants[vindex] + '"';
+		    break;
+		  case 0x0B: // true
+		    slot.value = 'true';
+		    break;
+		  case 0x0A: // false
+		    slot.value = 'false';
+		    break;
+		  case 0x0C: // null
+		    slot.value = 'null';
+		    break;
+		  case 0x00: // undefined
+		    slot.value = 'undefined';
+		    break;
+		}
+              }
+
 	      instance.slots.push(slot);
 	      break;
 	    case 0x01: // method
@@ -212,6 +249,7 @@ internal class Multiname {
 internal class Slot {
   public var name:Multiname;
   public var type:Multiname;
+  public var value:String;
 }
 
 internal class Method {
@@ -250,13 +288,16 @@ internal class Instance {
     tabs += '\t';
     
     for(i = 0; i < slots.length; i++) {
-      description += tabs + slots[i].name.name + ':' + slots[i].type.name + ';\n';
+      var scope:String = 'public ';
+      if((slots[i].name.ns.kind & 0x05) == 0x05)
+        scope = 'private ';
+      else if((slots[i].name.ns.kind & 0x18) == 0x18)
+        scope = 'protected ';
+      description += tabs + scope + 'var ' + slots[i].name.name + ':' + slots[i].type.name + (slots[i].value ? ' = ' + slots[i].value : '') + ';\n';
     }
 
     if(constructor) {
-      
       description += tabs + 'public function ' + (constructor.signature.name.replace(ns.name + ':' + name + '/', '')) + '() {}\n';
-      
     }
 
     tabs = tabs.slice(0, tabs.length -1);
