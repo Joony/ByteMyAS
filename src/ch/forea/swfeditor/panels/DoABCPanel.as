@@ -10,9 +10,11 @@ package ch.forea.swfeditor.panels {
     private var data:ComplexByteArray;
 
     private var stringConstants:Vector.<String> = Vector.<String>(['*']);
-    private var namespaces:Vector.<String> = Vector.<String>(['*']);
+    private var namespaces:Vector.<NS> = Vector.<NS>([new NS()]);
     private var namespaceSets:Vector.<Vector.<String>> = new Vector.<Vector.<String>>();
     private var multinames:Vector.<Multiname> = Vector.<Multiname>([new Multiname()]);
+
+    private var instances:Vector.<Instance> = new Vector.<Instance>();
 
     public function DoABCPanel(tag:DoABC) {
       super(tag);
@@ -22,6 +24,8 @@ package ch.forea.swfeditor.panels {
       data = tag.data;
 
       var i:uint;
+      var j:uint;
+
       // cache string constants
       for(i = 0; i < index.constant_pool.string.length; i++) {
 	data.position = index.constant_pool.string[i];
@@ -29,14 +33,17 @@ package ch.forea.swfeditor.panels {
       }
 
       // cache namspaces
+      var ns:NS;
       for(i = 0; i < index.constant_pool.ns.length; i++) {
+	ns = new NS();
+	ns.kind = data[index.constant_pool.ns[i].kind];
 	data.position = index.constant_pool.ns[i].name;
-	namespaces.push(stringConstants[data.readU32()]);
+	ns.name = stringConstants[data.readU32()];
+	namespaces.push(ns);
       }
 
       // cache namespace sets
       namespaceSets.push(Vector.<String>(['*']));
-      var j:uint;
       var nsSet:Vector.<String>;
       for(i = 0; i < index.constant_pool.ns_set.length; i++) {
 	nsSet = new Vector.<String>();
@@ -52,8 +59,7 @@ package ch.forea.swfeditor.panels {
       for(i = 0; i < index.constant_pool.multiname.length; i++) {
 	multiname = new Multiname();
 
-	var kind:uint = data[index.constant_pool.multiname[i].kind];
-	switch(kind) {
+	switch(data[index.constant_pool.multiname[i].kind]) {
           case 0x07:
 	  case 0x0D:
 	    data.position = index.constant_pool.multiname[i].data.ns;
@@ -82,11 +88,86 @@ package ch.forea.swfeditor.panels {
 	multinames.push(multiname);
       }
       
-      trace('stringConstants = ' + stringConstants);
-      trace('namespaces = ' + namespaces);
-      trace('namespaceSets = ' + namespaceSets);
-      trace('multinames = ' + multinames);
+      // trace('stringConstants = ' + stringConstants);
+      // trace('namespaces = ' + namespaces);
+      // trace('namespaceSets = ' + namespaceSets);
+      // trace('multinames = ' + multinames);
 
+      
+      // instance info
+      var instance:Instance;
+      var instanceMultiname:Multiname;
+      for(i = 0; i < index.instance.length; i++) {
+	instance = new Instance();
+	// multiname
+	data.position = index.instance[i].name;
+	instanceMultiname = multinames[data.readU32()];
+	instance.name = instanceMultiname.name;
+	instance.ns = instanceMultiname.ns;
+	// super
+	data.position = index.instance[i].super_name;
+	instanceMultiname = multinames[data.readU32()];
+	instance.superClass = instanceMultiname.name;
+	// XXX: probably have to take in to account the kind of namespace (should be package namespace)
+	if(instanceMultiname.ns && instanceMultiname.ns != instance.ns && instanceMultiname.ns.name != '')
+	  instance.imports.push(instanceMultiname.ns.name + '.' + instanceMultiname.name);
+	// flags - Dynamic, Final, Interface
+	var flags:uint = data[index.instance[i].flags];
+	instance.isSealed = (flags & 0x01) == 0x01;
+	instance.isFinal = (flags & 0x02) == 0x02;
+	instance.isInterface = (flags & 0x04) == 0x04;
+	if((flags & 0x08) == 0x08) {
+	  data.position = index.instance[i].protectedNs;
+	  instance.protectedNs = namespaces[data.readU32()];
+        }
+	// constructor
+	if(index.instance[i].iinit) {
+	  instance.constructor = new Method();
+	  data.position = index.instance[i].iinit;
+	  var methodID:uint = data.readU32();
+	  data.position = index.method[methodID].name;
+	  instance.constructor.signature.name = stringConstants[data.readU32()];
+        }
+	// traits - instance variables, methods, getters & setters
+	var traitKind:uint;
+	var traitAttributes:uint;
+	for(j = 0; j < index.instance[i].trait.length; j++) {
+	  traitKind = data[index.instance[i].trait[j].kind] & 0x0F;
+          switch(traitKind) {
+	    case 0x00: // slot
+	      var slot:Slot = new Slot();
+	      data.position = index.instance[i].trait[j].name;
+	      slot.name = multinames[data.readU32()];
+	      data.position = index.instance[i].trait[j].data.type_name;
+	      slot.type = multinames[data.readU32()];
+	      instance.slots.push(slot);
+	      break;
+	    case 0x01: // method
+	      
+	      break;
+	    case 0x02: // getter
+	      
+	      break;
+	    case 0x03: // setter
+	      
+	      break;
+	    case 0x04: // class
+	      
+	      break;
+	    case 0x05: // function
+	      
+	      break;
+	    case 0x06: // constant
+	      
+	      break;
+          }
+        }
+
+	instances.push(instance);
+      }
+
+
+      trace('instances = \n' + instances);
     }
     
 
@@ -94,13 +175,96 @@ package ch.forea.swfeditor.panels {
 
 }
 
+internal class NS {
+  public var kind:uint;
+  public var name:String = '*';
+  public function toString():String {
+    var kind:Vector.<String> = new Vector.<String>;
+    if((this.kind & 0x08) == 0x08)
+      kind.push('namespace');
+    if((this.kind & 0x16) == 0x16)
+      kind.push('package namespace');
+    if((this.kind & 0x17) == 0x17)
+      kind.push('package internal namespace');
+    if((this.kind & 0x18) == 0x18)
+      kind.push('protected namespace');
+    if((this.kind & 0x19) == 0x19)
+      kind.push('explicit namespace');
+    if((this.kind & 0x1A) == 0x1A)
+      kind.push('static protected namespace');
+    if((this.kind & 0x05) == 0x05)
+      kind.push('private namespace');
+    return '[Namespace name = ' + name + ', kind = ' + kind + ']';
+  }
+}
+
 internal class Multiname {
-  public var ns:String = '*';
+  public var ns:NS;
   public var name:String = '*';
   public var ns_set:Vector.<String>;
   public function toString():String {
     if(ns_set)
       return '[Multiname ' + ns_set + ':' + name + ']';
     return '[Multiname ' + ns + ':' + name + ']';
+  }
+}
+
+internal class Slot {
+  public var name:Multiname;
+  public var type:Multiname;
+}
+
+internal class Method {
+  public var signature:MethodSignature = new MethodSignature();
+}
+
+internal class MethodSignature {
+  public var name:String;
+  public var returnType:Multiname;
+}
+
+internal class Instance {
+  public var imports:Vector.<String> = new Vector.<String>();
+  public var ns:NS;
+  public var superClass:String;
+  public var name:String;
+  public var interfaces:Vector.<String>;
+  public var isSealed:Boolean;
+  public var isFinal:Boolean;
+  public var isInterface:Boolean;
+  public var protectedNs:NS;
+  public var slots:Vector.<Slot> = new Vector.<Slot>();
+  public var constructor:Method;
+  public function toString():String {
+    var description:String = '';
+    var tabs:String = '';
+    var i:uint;
+    if((ns.kind & 0x05) != 0x05) {
+      description += 'package' + (ns ? ' ' + ns.name : '') + ' {\n';
+      tabs += '\t';
+    }
+    for(i = 0; i < imports.length; i++) {
+      description += tabs + 'import ' + imports[i] + ';\n';
+    }
+    description += tabs + (isFinal ? 'final ' : '') + ((ns.kind & 0x05) == 0x05 ? 'internal ' : 'public ') + (isSealed ? '' : 'dynamic ') + (isInterface ? 'interface ' : 'class ') + name + (superClass && superClass != 'Object' ? ' extends ' + superClass : '') + ' {\n';
+    tabs += '\t';
+    
+    for(i = 0; i < slots.length; i++) {
+      description += tabs + slots[i].name.name + ':' + slots[i].type.name + ';\n';
+    }
+
+    if(constructor) {
+      
+      description += tabs + 'public function ' + (constructor.signature.name.replace(ns.name + ':' + name + '/', '')) + '() {}\n';
+      
+    }
+
+    tabs = tabs.slice(0, tabs.length -1);
+    description += tabs + '}\n';
+    tabs = tabs.slice(0, tabs.length -1);
+    if((ns.kind & 0x05) != 0x05) {
+      description += '}\n';
+    }
+    return description;
   }
 }

@@ -261,7 +261,8 @@ multiNameConstants[i].types = types;
 	tempData.readU32();
 	index.instance[i].flags = tempData.position;
 	var instance_flags:uint = tempData.readUnsignedByte();
-	if(instance_flags >> 3 & 1){
+	// XXX: Shouldn't this be: if(instance_flags & 0x08)
+	if(instance_flags >> 3 & 0x01){
 	  index.instance[i].protectedNs = tempData.position;
 	  tempData.readU32();
 	}
