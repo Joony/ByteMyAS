@@ -167,9 +167,13 @@ package ch.forea.bytemyas.tags {
 	}else if(tempData[tempData.position] == 0x1D){
 	  // WARNING: undocumented
 	  tempData.position++;
-	  tempData.readU32();
+	  // temp
+	  index.constant_pool.multiname[i - 1].data.name = tempData.position;
+	  tempData.readU32(); // index in to the multiname array of the constant pool (will have the name 'Vector') 
+	  index.constant_pool.multiname[i - 1].data.type_count = tempData.position;
 	  inner_count = tempData.readU32();
 	  for(j = 0; j < inner_count; j++) {
+	    index.constant_pool.multiname[i - 1].data.type[j] = tempData.position;
 	    tempData.readU32();
 	  }
 	  
@@ -186,6 +190,19 @@ for (int t = 0; t < count; t++){
 multiNameConstants[i].typeName = mn;
 multiNameConstants[i].types = types;
 */
+/*
+It turns out that this is the implementation of Vector.
+See: http://blog.richardszalay.com/2009/02/11/generics-vector-in-the-avm2/
+
+multiname_kind_vector
+{
+  u30 name
+  u30 type_count
+  u30 type[type_count] // this is some form of multiname_kind_???
+}
+
+*/
+
 
 	}
 
@@ -561,6 +578,9 @@ internal class MultinameKind{
   public var ns:uint;
   public var name:uint;
   public var ns_set:uint;
+
+  public var type_count:uint;
+  public var type:Vector.<uint> = new Vector.<uint>();
 
   public function toString():String{
     var val:String = "\n\t\t\t\tMultinameKind{\n";

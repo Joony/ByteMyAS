@@ -84,6 +84,17 @@ package ch.forea.swfeditor.panels {
 	    data.position = index.constant_pool.multiname[i].data.ns_set;
 	    multiname.ns_set = namespaceSets[data.readU32()];
 	    break;
+	  case 0x1D:
+	    data.position = index.constant_pool.multiname[i].data.name;
+	    // XXX: just bodges together the Vector type
+	    // TODO: store the types of the Vector so they can be retrieved later for import statements
+	    multiname.name = multinames[data.readU32()].name + '.<';
+	    for(j = 0; j < index.constant_pool.multiname[i].data.type.length; j++) {
+              data.position = index.constant_pool.multiname[i].data.type[j];
+	      var vectorTypeMultiname:Multiname = multinames[data.readU32()];
+              multiname.name += vectorTypeMultiname.name;
+            }
+	    multiname.name += '>';
         }
 	multinames.push(multiname);
       }
@@ -109,8 +120,7 @@ package ch.forea.swfeditor.panels {
 	instanceMultiname = multinames[data.readU32()];
 	instance.superClass = instanceMultiname.name;
 	// XXX: probably have to take in to account the kind of namespace (should be package namespace)
-	if(instanceMultiname.ns && instanceMultiname.ns != instance.ns && instanceMultiname.ns.name != '')
-	  instance.addImport(instanceMultiname.ns.name + '.' + instanceMultiname.name);
+	instance.addImport(instanceMultiname);
 	// flags - Dynamic, Final, Interface
 	var flags:uint = data[index.instance[i].flags];
 	instance.isSealed = (flags & 0x01) == 0x01;
@@ -122,11 +132,13 @@ package ch.forea.swfeditor.panels {
         }
 	// constructor
 	if(index.instance[i].iinit) {
+	  /*
 	  instance.constructor = new Method();
 	  data.position = index.instance[i].iinit;
 	  var methodID:uint = data.readU32();
 	  data.position = index.method[methodID].name;
 	  instance.constructor.signature.name = stringConstants[data.readU32()];
+          */
         }
 	// traits - instance variables, methods, getters & setters
 	var traitKind:uint;
@@ -134,15 +146,15 @@ package ch.forea.swfeditor.panels {
 	for(j = 0; j < index.instance[i].trait.length; j++) {
 	  traitKind = data[index.instance[i].trait[j].kind] & 0x0F;
           switch(traitKind) {
-	    case 0x00: // slot
+	    case 0x00: // slot/instance variable
 	      var slot:Slot = new Slot();
 	      data.position = index.instance[i].trait[j].name;
 	      slot.name = multinames[data.readU32()];
-	      // TODO: slot types may have to be imported
 	      data.position = index.instance[i].trait[j].data.type_name;
 	      slot.type = multinames[data.readU32()];
-	      if(slot.type.ns && slot.type.ns.name != '' && (slot.type.ns.kind & 0x05) != 0x05)
-	        instance.addImport(slot.type.ns.name + '.' + slot.type.name);
+              instance.addImport(slot.type);
+
+	      // TODO: check for additional types (Vector) and import
 
 	      data.position = index.instance[i].trait[j].data.vindex;
 	      var vindex:uint = data.readU32();
@@ -182,7 +194,19 @@ package ch.forea.swfeditor.panels {
 	      instance.slots.push(slot);
 	      break;
 	    case 0x01: // method
+	      var method:Method = new Method();
+	      data.position = index.instance[i].trait[j].name;
+	      method.signature.name = multinames[data.readU32()];
 	      
+	      data.position = index.instance[i].trait[j].data.method;
+	      var methodID:uint = data.readU32();
+	      data.position = index.method[methodID].return_type;
+	      method.signature.returnType = multinames[data.readU32()];
+	      instance.addImport(method.signature.returnType);
+              
+
+	      instance.methods.push(method);
+
 	      break;
 	    case 0x02: // getter
 	      
@@ -259,13 +283,18 @@ internal class Method {
 }
 
 internal class MethodSignature {
-  public var name:String;
+  public var name:Multiname;
   public var returnType:Multiname;
 }
 
 internal class Instance {
   public var imports:Vector.<String> = new Vector.<String>();
-  public function addImport(importStatement:String):void {
+  public function addImport(multiname:Multiname):void {
+    var importStatement:String;
+    if(multiname.ns && multiname.ns.name != '' && (multiname.ns.kind & 0x05) != 0x05 && multiname.ns.name != ns.name)
+      importStatement = multiname.ns.name + '.' + multiname.name;      
+    else
+      return;
     for(var i:uint = 0; i < imports.length; i++) {
       if(imports[i] == importStatement)
         return;
@@ -282,20 +311,28 @@ internal class Instance {
   public var protectedNs:NS;
   public var slots:Vector.<Slot> = new Vector.<Slot>();
   public var constructor:Method;
+  public var methods:Vector.<Method> = new Vector.<Method>();
   public function toString():String {
     var description:String = '';
     var tabs:String = '';
     var i:uint;
+
+    // package
     if((ns.kind & 0x05) != 0x05) {
       description += 'package' + (ns ? ' ' + ns.name : '') + ' {\n';
       tabs += '\t';
     }
+
+    // imports
     for(i = 0; i < imports.length; i++) {
       description += tabs + 'import ' + imports[i] + ';\n';
     }
+
+    // class declaration
     description += tabs + (isFinal ? 'final ' : '') + ((ns.kind & 0x05) == 0x05 ? 'internal ' : 'public ') + (isSealed ? '' : 'dynamic ') + (isInterface ? 'interface ' : 'class ') + name + (superClass && superClass != 'Object' ? ' extends ' + superClass : '') + ' {\n';
     tabs += '\t';
     
+    // instance variables
     for(i = 0; i < slots.length; i++) {
       var scope:String = 'public ';
       if((slots[i].name.ns.kind & 0x05) == 0x05)
@@ -305,8 +342,21 @@ internal class Instance {
       description += tabs + scope + 'var ' + slots[i].name.name + ':' + slots[i].type.name + (slots[i].value ? ' = ' + slots[i].value : '') + ';\n';
     }
 
+    // constructor
+    /*
     if(constructor) {
       description += tabs + 'public function ' + (constructor.signature.name.replace(ns.name + ':' + name + '/', '')) + '() {}\n';
+    }
+    */
+
+    // methods
+    for(i = 0; i < methods.length; i++) {
+      scope = 'public ';
+      if((methods[i].signature.name.ns.kind & 0x05) == 0x05)
+        scope = 'private ';
+      else if((methods[i].signature.name.ns.kind & 0x18) == 0x18)
+        scope = 'protected ';
+      description += tabs + scope + 'function ' + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
     }
 
     tabs = tabs.slice(0, tabs.length -1);
