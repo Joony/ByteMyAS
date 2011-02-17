@@ -86,15 +86,13 @@ package ch.forea.swfeditor.panels {
 	    break;
 	  case 0x1D:
 	    data.position = index.constant_pool.multiname[i].data.name;
-	    // XXX: just bodges together the Vector type
+	    // XXX: this just bodges together the Vector type
 	    // TODO: store the types of the Vector so they can be retrieved later for import statements
-	    multiname.name = multinames[data.readU32()].name + '.<';
+	    multiname.name = multinames[data.readU32()].name;
 	    for(j = 0; j < index.constant_pool.multiname[i].data.type.length; j++) {
               data.position = index.constant_pool.multiname[i].data.type[j];
-	      var vectorTypeMultiname:Multiname = multinames[data.readU32()];
-              multiname.name += vectorTypeMultiname.name;
+              multiname.types.push(multinames[data.readU32()]);
             }
-	    multiname.name += '>';
         }
 	multinames.push(multiname);
       }
@@ -132,13 +130,18 @@ package ch.forea.swfeditor.panels {
         }
 	// constructor
 	if(index.instance[i].iinit) {
-	  /*
+	  
 	  instance.constructor = new Method();
 	  data.position = index.instance[i].iinit;
 	  var methodID:uint = data.readU32();
 	  data.position = index.method[methodID].name;
-	  instance.constructor.signature.name = stringConstants[data.readU32()];
-          */
+	  var tempMultiname:Multiname = new Multiname();
+	  tempMultiname.name = stringConstants[data.readU32()];
+	  instance.constructor.signature.name = tempMultiname;
+	  // remove the package and class from the name
+          instance.constructor.signature.name.name.replace(instance.ns.name + ':' + instance.name + '/', '');
+
+
         }
 	// traits - instance variables, methods, getters & setters
 	var traitKind:uint;
@@ -154,7 +157,10 @@ package ch.forea.swfeditor.panels {
 	      slot.type = multinames[data.readU32()];
               instance.addImport(slot.type);
 
-	      // TODO: check for additional types (Vector) and import
+	      // Vector types
+	      for(var k:uint = 0; k < slot.type.types.length; k++) {
+                instance.addImport(slot.type.types[k]);
+              }
 
 	      data.position = index.instance[i].trait[j].data.vindex;
 	      var vindex:uint = data.readU32();
@@ -194,7 +200,10 @@ package ch.forea.swfeditor.panels {
 	      instance.slots.push(slot);
 	      break;
 	    case 0x01: // method
+	    case 0x02: // getter
+	    case 0x03: // setter
 	      var method:Method = new Method();
+	      method.kind = traitKind;
 	      data.position = index.instance[i].trait[j].name;
 	      method.signature.name = multinames[data.readU32()];
 	      
@@ -204,15 +213,7 @@ package ch.forea.swfeditor.panels {
 	      method.signature.returnType = multinames[data.readU32()];
 	      instance.addImport(method.signature.returnType);
               
-
 	      instance.methods.push(method);
-
-	      break;
-	    case 0x02: // getter
-	      
-	      break;
-	    case 0x03: // setter
-	      
 	      break;
 	    case 0x04: // class
 	      
@@ -265,6 +266,8 @@ internal class Multiname {
   public var ns:NS;
   public var name:String = '*';
   public var ns_set:Vector.<String>;
+  public var types:Vector.<Multiname> = new Vector.<Multiname>;
+
   public function toString():String {
     if(ns_set)
       return '[Multiname ' + ns_set + ':' + name + ']';
@@ -279,6 +282,7 @@ internal class Slot {
 }
 
 internal class Method {
+  public var kind:uint;
   public var signature:MethodSignature = new MethodSignature();
 }
 
@@ -315,7 +319,9 @@ internal class Instance {
   public function toString():String {
     var description:String = '';
     var tabs:String = '';
+    var scope:String;
     var i:uint;
+    var j:uint;
 
     // package
     if((ns.kind & 0x05) != 0x05) {
@@ -329,25 +335,27 @@ internal class Instance {
     }
 
     // class declaration
-    description += tabs + (isFinal ? 'final ' : '') + ((ns.kind & 0x05) == 0x05 ? 'internal ' : 'public ') + (isSealed ? '' : 'dynamic ') + (isInterface ? 'interface ' : 'class ') + name + (superClass && superClass != 'Object' ? ' extends ' + superClass : '') + ' {\n';
+    description += tabs + (isFinal ? 'final ' : '') + ((ns.kind & 0x05) == 0x05 ? 'internal ' : 'public ') + (isSealed ? '' : 'dynamic ') + (isInterface ? 'interface ' : 'class ') + name + (superClass && superClass != 'Object' && superClass != '*' ? ' extends ' + superClass : '') + ' {\n';
     tabs += '\t';
     
     // instance variables
     for(i = 0; i < slots.length; i++) {
-      var scope:String = 'public ';
+      scope = 'public ';
       if((slots[i].name.ns.kind & 0x05) == 0x05)
         scope = 'private ';
       else if((slots[i].name.ns.kind & 0x18) == 0x18)
         scope = 'protected ';
-      description += tabs + scope + 'var ' + slots[i].name.name + ':' + slots[i].type.name + (slots[i].value ? ' = ' + slots[i].value : '') + ';\n';
+      var vectorType:String = '';
+      for(j = 0; j < slots[i].type.types.length; j++) {
+	vectorType += '.<' + slots[i].type.types[j].name + '>';
+      }
+      description += tabs + scope + 'var ' + slots[i].name.name + ':' + slots[i].type.name + vectorType + (slots[i].value ? ' = ' + slots[i].value : '') + ';\n';
     }
 
     // constructor
-    /*
     if(constructor) {
-      description += tabs + 'public function ' + (constructor.signature.name.replace(ns.name + ':' + name + '/', '')) + '() {}\n';
+      description += tabs + 'public function ' + constructor.signature.name.name + '() {}\n';
     }
-    */
 
     // methods
     for(i = 0; i < methods.length; i++) {
@@ -356,7 +364,7 @@ internal class Instance {
         scope = 'private ';
       else if((methods[i].signature.name.ns.kind & 0x18) == 0x18)
         scope = 'protected ';
-      description += tabs + scope + 'function ' + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
+      description += tabs + scope + 'function ' + (methods[i].kind == 0x02 ? 'get ' : (methods[i].kind == 0x03 ? 'set ' : '')) + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
     }
 
     tabs = tabs.slice(0, tabs.length -1);

@@ -174,7 +174,7 @@ package ch.forea.bytemyas.tags {
 	  inner_count = tempData.readU32();
 	  for(j = 0; j < inner_count; j++) {
 	    index.constant_pool.multiname[i - 1].data.type[j] = tempData.position;
-	    tempData.readU32();
+	    tempData.readU32(); // another index in to the multiname array
 	  }
 	  
 // here is the implementation of 0x1D from AbcPrinter.java
