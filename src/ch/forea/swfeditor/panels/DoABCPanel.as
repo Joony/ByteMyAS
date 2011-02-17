@@ -141,7 +141,7 @@ package ch.forea.swfeditor.panels {
 	  instance.constructor.signature.name = tempMultiname;
 
 	  var paramLength:uint = index.method[methodID].param_type.length;
-	  var optionalParamLength:uint = index.method[methodID].options.option.length;
+ 	  var optionalParamLength:uint = index.method[methodID].options.option.length;
 	  var parameter:Parameter;
 	  for(j = 0; j < paramLength; j++) {
 	    parameter = new Parameter();
@@ -258,7 +258,52 @@ package ch.forea.swfeditor.panels {
 	      data.position = index.method[methodID].return_type;
 	      method.signature.returnType = multinames[data.readU32()];
 	      instance.addImport(method.signature.returnType);
-              
+
+	      var paramLength:uint = index.method[methodID].param_type.length;
+ 	      var optionalParamLength:uint = index.method[methodID].options.option.length;
+	      var parameter:Parameter;
+	      for(k = 0; k < paramLength; k++) {
+		parameter = new Parameter();
+		data.position = index.method[methodID].param_type[k];
+		parameter.type = multinames[data.readU32()];
+		instance.addImport(parameter.type);
+		data.position = index.method[methodID].param_names[k].param_name;
+		parameter.name = stringConstants[data.readU32()];
+	    
+		if(optionalParamLength && k >= paramLength - optionalParamLength) {
+		  data.position = index.method[methodID].options.option[k - (paramLength - optionalParamLength)].val;
+		  switch(data[index.method[methodID].options.option[k - (paramLength - optionalParamLength)].kind]) {
+                    case 0x03: // integer
+		      // TODO: cache integer constants
+		      parameter.value = 'unknown - integer';
+		      break;
+		    case 0x04: // unsigned integer
+		      // TODO: cache unsigned integer constants
+		      parameter.value = 'unknown - unsigned int';
+		      break;
+		    case 0x06: // double
+		      // TODO: cache double constants
+		      parameter.value = 'unknown - double';
+		      break;
+		    case 0x01: // string
+		      parameter.value = '"' + stringConstants[data.readU32()] + '"';
+		      break;
+		    case 0x0B: // true
+		      parameter.value = 'true';
+		      break;
+		    case 0x0A: // false
+		      parameter.value = 'false';
+		      break;
+		    case 0x0C: // null
+		      parameter.value = 'null';
+		      break;
+		    case 0x00: // undefined
+		      parameter.value = 'undefined';
+		      break;
+		  }
+	        }
+		method.signature.parameters.push(parameter);
+	      }
 	      instance.methods.push(method);
 	      break;
 	    case 0x04: // class
@@ -403,8 +448,9 @@ internal class Instance {
     }
 
     // constructor
+    var parameters:Array
     if(constructor) {
-      var parameters:Array = [];
+      parameters = [];
       for(i = 0; i < constructor.signature.parameters.length; i++) {
 	  parameters.push(constructor.signature.parameters[i].name + ':' + constructor.signature.parameters[i].type.name + (constructor.signature.parameters[i].value ? ' = ' + constructor.signature.parameters[i].value : ''));
       }
@@ -418,8 +464,12 @@ internal class Instance {
         scope = 'private ';
       else if((methods[i].signature.name.ns.kind & 0x18) == 0x18)
         scope = 'protected ';
+      parameters = [];
+      for(j = 0; j < methods[i].signature.parameters.length; j++) {
+	  parameters.push(methods[i].signature.parameters[j].name + ':' + methods[i].signature.parameters[j].type.name + (methods[i].signature.parameters[j].value ? ' = ' + methods[i].signature.parameters[j].value : ''));
+      }
       var attributes:uint = methods[i].kind >> 4;
-      description += tabs + ((attributes & 0x2) == 0x02 ? 'override ' : '') + scope + ((attributes & 0x1) == 0x01 ? 'final ' : '') + 'function ' + ((methods[i].kind & 0x02) == 0x02 ? 'get ' : ((methods[i].kind & 0x03) == 0x03 ? 'set ' : '')) + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
+      description += tabs + ((attributes & 0x2) == 0x02 ? 'override ' : '') + scope + ((attributes & 0x1) == 0x01 ? 'final ' : '') + 'function ' + ((methods[i].kind & 0x02) == 0x02 ? 'get ' : ((methods[i].kind & 0x03) == 0x03 ? 'set ' : '')) + methods[i].signature.name.name + '(' + parameters.join(', ') + '):' + methods[i].signature.returnType.name + ' {}\n';
     }
 
     tabs = tabs.slice(0, tabs.length -1);
