@@ -106,6 +106,7 @@ package ch.forea.swfeditor.panels {
       // instance info
       var instance:Instance;
       var instanceMultiname:Multiname;
+      var methodID:uint;
       for(i = 0; i < index.instance.length; i++) {
 	instance = new Instance();
 	// multiname
@@ -133,22 +134,67 @@ package ch.forea.swfeditor.panels {
 	  
 	  instance.constructor = new Method();
 	  data.position = index.instance[i].iinit;
-	  var methodID:uint = data.readU32();
+	  methodID = data.readU32();
 	  data.position = index.method[methodID].name;
 	  var tempMultiname:Multiname = new Multiname();
-	  tempMultiname.name = stringConstants[data.readU32()];
+	  tempMultiname.name = stringConstants[data.readU32()].replace(instance.ns.name + ':' + instance.name + '/', '');
 	  instance.constructor.signature.name = tempMultiname;
-	  // remove the package and class from the name
-          instance.constructor.signature.name.name.replace(instance.ns.name + ':' + instance.name + '/', '');
 
+	  var paramLength:uint = index.method[methodID].param_type.length;
+	  var optionalParamLength:uint = index.method[methodID].options.option.length;
+	  var parameter:Parameter;
+	  for(j = 0; j < paramLength; j++) {
+	    parameter = new Parameter();
+	    data.position = index.method[methodID].param_type[j];
+	    parameter.type = multinames[data.readU32()];
+	    instance.addImport(parameter.type);
+	    data.position = index.method[methodID].param_names[j].param_name;
+	    parameter.name = stringConstants[data.readU32()];
+	    
+	    if(optionalParamLength && j >= paramLength - optionalParamLength) {
+	      data.position = index.method[methodID].options.option[j - (paramLength - optionalParamLength)].val;
+	      switch(data[index.method[methodID].options.option[j - (paramLength - optionalParamLength)].kind]) {
+                case 0x03: // integer
+		  // TODO: cache integer constants
+		  parameter.value = 'unknown - integer';
+		  break;
+		case 0x04: // unsigned integer
+		  // TODO: cache unsigned integer constants
+		  parameter.value = 'unknown - unsigned int';
+		  break;
+		case 0x06: // double
+		  // TODO: cache double constants
+		  parameter.value = 'unknown - double';
+		  break;
+		case 0x01: // string
+		  parameter.value = '"' + stringConstants[data.readU32()] + '"';
+		  break;
+		case 0x0B: // true
+		  parameter.value = 'true';
+		  break;
+		case 0x0A: // false
+		  parameter.value = 'false';
+		  break;
+		case 0x0C: // null
+		  parameter.value = 'null';
+		  break;
+		case 0x00: // undefined
+		  parameter.value = 'undefined';
+		  break;
+              }
+	    }
 
+	    instance.constructor.signature.parameters.push(parameter);
+	  }
+	  
+	  
         }
 	// traits - instance variables, methods, getters & setters
 	var traitKind:uint;
 	var traitAttributes:uint;
 	for(j = 0; j < index.instance[i].trait.length; j++) {
-	  traitKind = data[index.instance[i].trait[j].kind] & 0x0F;
-          switch(traitKind) {
+	  traitKind = data[index.instance[i].trait[j].kind];
+          switch(traitKind & 0x0F) {
 	    case 0x00: // slot/instance variable
 	      var slot:Slot = new Slot();
 	      data.position = index.instance[i].trait[j].name;
@@ -208,7 +254,7 @@ package ch.forea.swfeditor.panels {
 	      method.signature.name = multinames[data.readU32()];
 	      
 	      data.position = index.instance[i].trait[j].data.method;
-	      var methodID:uint = data.readU32();
+	      methodID = data.readU32();
 	      data.position = index.method[methodID].return_type;
 	      method.signature.returnType = multinames[data.readU32()];
 	      instance.addImport(method.signature.returnType);
@@ -216,13 +262,10 @@ package ch.forea.swfeditor.panels {
 	      instance.methods.push(method);
 	      break;
 	    case 0x04: // class
-	      
 	      break;
 	    case 0x05: // function
-	      
 	      break;
 	    case 0x06: // constant
-	      
 	      break;
           }
         }
@@ -289,6 +332,13 @@ internal class Method {
 internal class MethodSignature {
   public var name:Multiname;
   public var returnType:Multiname;
+  public var parameters:Vector.<Parameter> = new Vector.<Parameter>();
+}
+
+internal class Parameter {
+  public var name:String;
+  public var type:Multiname;
+  public var value:*;
 }
 
 internal class Instance {
@@ -354,7 +404,11 @@ internal class Instance {
 
     // constructor
     if(constructor) {
-      description += tabs + 'public function ' + constructor.signature.name.name + '() {}\n';
+      var parameters:Array = [];
+      for(i = 0; i < constructor.signature.parameters.length; i++) {
+	  parameters.push(constructor.signature.parameters[i].name + ':' + constructor.signature.parameters[i].type.name + (constructor.signature.parameters[i].value ? ' = ' + constructor.signature.parameters[i].value : ''));
+      }
+      description += tabs + 'public function ' + constructor.signature.name.name + '(' + parameters.join(', ') + ') {}\n';
     }
 
     // methods
@@ -364,7 +418,8 @@ internal class Instance {
         scope = 'private ';
       else if((methods[i].signature.name.ns.kind & 0x18) == 0x18)
         scope = 'protected ';
-      description += tabs + scope + 'function ' + (methods[i].kind == 0x02 ? 'get ' : (methods[i].kind == 0x03 ? 'set ' : '')) + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
+      var attributes:uint = methods[i].kind >> 4;
+      description += tabs + ((attributes & 0x2) == 0x02 ? 'override ' : '') + scope + ((attributes & 0x1) == 0x01 ? 'final ' : '') + 'function ' + ((methods[i].kind & 0x02) == 0x02 ? 'get ' : ((methods[i].kind & 0x03) == 0x03 ? 'set ' : '')) + methods[i].signature.name.name + '():' + methods[i].signature.returnType.name + ' {}\n';
     }
 
     tabs = tabs.slice(0, tabs.length -1);
